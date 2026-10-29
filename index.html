@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E151C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Mailkey</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column. Inputs first, the derived password right under the Generate button. */
+:root {
+  --bg: #EDF0F3;
+  --surface: #FFFFFF;
+  --field: #F6F8FA;
+  --ink: #121C26;
+  --muted: #566472;
+  --line: #D2D9E0;
+  --accent: #0B6E7F;
+  --accent-ink: #FFFFFF;
+  --ok: #1E7B4F;
+  --warn: #9A5B00;
+  --bad: #B3261E;
+  --digit: #0B6E7F;
+  --symbol: #9A4300;
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151C;
+    --surface: #16202A;
+    --field: #0F1820;
+    --ink: #E6ECF2;
+    --muted: #93A1AF;
+    --line: #28343F;
+    --accent: #5CC4D4;
+    --accent-ink: #06222A;
+    --ok: #5FCB93;
+    --warn: #E5B25D;
+    --bad: #FF8A80;
+    --digit: #5CC4D4;
+    --symbol: #F0A56B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151C;
+  --surface: #16202A;
+  --field: #0F1820;
+  --ink: #E6ECF2;
+  --muted: #93A1AF;
+  --line: #28343F;
+  --accent: #5CC4D4;
+  --accent-ink: #06222A;
+  --ok: #5FCB93;
+  --warn: #E5B25D;
+  --bad: #FF8A80;
+  --digit: #5CC4D4;
+  --symbol: #F0A56B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 40px;
+}
+.wrap { max-width: 30rem; margin: 0 auto; display: grid; gap: 16px; }
+
+header { display: grid; gap: 6px; padding-bottom: 4px; }
+h1 { font: 700 2rem/1.1 var(--font-display); letter-spacing: -0.02em; margin: 0; }
+.lede { margin: 0; color: var(--muted); max-width: 36ch; text-wrap: pretty; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+form.card { display: grid; gap: 18px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.lab {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+}
+.lab output { font-family: var(--font-mono); font-size: 0.875rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.hint { margin: 0; font-size: 0.8125rem; color: var(--muted); min-height: 1.25em; overflow-wrap: anywhere; }
+.hint b { color: var(--ink); font-weight: 600; }
+
+input[type=text], input[type=password], input[type=number] {
+  font: inherit; font-size: 1rem; color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; min-height: 48px; width: 100%; min-width: 0;
+}
+input::placeholder { color: var(--muted); opacity: 0.75; }
+.masked { -webkit-text-security: disc; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.secret-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+button {
+  font: inherit; font-weight: 600; min-height: 48px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 0 16px;
+}
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; min-height: 52px; font-size: 1.0625rem; }
+button.primary:disabled { opacity: 0.7; cursor: progress; }
+
+.meter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.meter i { height: 4px; border-radius: 2px; background: var(--line); }
+.meter[data-level="1"] i:nth-child(-n+1) { background: var(--bad); }
+.meter[data-level="2"] i:nth-child(-n+2) { background: var(--warn); }
+.meter[data-level="3"] i { background: var(--ok); }
+
+input[type=range] { width: 100%; accent-color: var(--accent); min-height: 32px; margin: 0; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 500; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; flex: none; }
+.check small { color: var(--muted); font-weight: 400; }
+
+.stepper { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; }
+.stepper button { padding: 0; font-size: 1.25rem; }
+.stepper input { text-align: center; font-family: var(--font-mono); }
+
+.result { display: grid; gap: 14px; }
+.r-head { display: grid; gap: 2px; }
+.for { font-weight: 600; overflow-wrap: anywhere; }
+.pw {
+  font-family: var(--font-mono); font-weight: 500;
+  font-size: clamp(1.1875rem, 5.4vw, 1.5rem); line-height: 1.45; letter-spacing: 0.02em;
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px; min-height: 4.5rem; word-break: break-all; user-select: all; -webkit-user-select: all;
+}
+.pw[data-state="idle"], .pw[data-state="hidden"] { color: var(--muted); user-select: none; -webkit-user-select: none; }
+.pw .d { color: var(--digit); }
+.pw .s { color: var(--symbol); }
+.manual { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.02em; }
+.status { margin: 0; font-size: 0.9375rem; min-height: 1.5em; }
+.status[data-tone="bad"] { color: var(--bad); }
+.status[data-tone="ok"] { color: var(--ok); }
+.status[data-tone="muted"] { color: var(--muted); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.meta div { border-top: 1px solid var(--line); padding-top: 8px; min-width: 0; }
+.meta dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.meta dd { margin: 2px 0 0; font-family: var(--font-mono); font-size: 0.9375rem; overflow-wrap: anywhere; }
+.note { margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.linkbtn { border: 0; min-height: 36px; padding: 0; color: var(--muted); font-weight: 500; font-size: 0.875rem; text-decoration: underline; justify-self: start; }
+
+.good h2 { font: 600 1rem/1.3 var(--font-display); margin: 0 0 8px; }
+.good ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 8px; color: var(--muted); font-size: 0.9375rem; }
+.good li { text-wrap: pretty; }
+.good li::marker { color: var(--accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  button { transition: opacity .15s; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Mailkey</h1>
+    <p class="lede">Type a Gmail address and get its password. Same address and same secret always give the same password, so there is nothing to store.</p>
+  </header>
+
+  <form class="card" id="f" novalidate autocomplete="off">
+    <div class="field">
+      <label class="lab" for="email">Gmail address</label>
+      <input id="email" name="mk-address" type="text" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@gmail.com">
+      <p class="hint" id="emailHint">Dots and +tags are ignored for Gmail, as Google does.</p>
+    </div>
+
+    <div class="field">
+      <label class="lab" for="secret">Master secret</label>
+      <div class="secret-row">
+        <input id="secret" class="masked" name="mk-secret" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Four random words or 16+ characters">
+        <button type="button" id="showSecret" aria-pressed="false">Show</button>
+      </div>
+      <div class="meter" id="meter" data-level="0" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="hint" id="secretHint">The one thing you must remember. Never use it anywhere else.</p>
+    </div>
+
+    <div class="field">
+      <label class="lab" for="length">Length <output id="lenOut" for="length">20</output></label>
+      <input id="length" type="range" min="12" max="32" step="1" value="20">
+    </div>
+
+    <label class="check" for="symbols">
+      <input id="symbols" type="checkbox" checked>
+      <span>Include symbols <small>(turn off if a site refuses them)</small></span>
+    </label>
+
+    <div class="field">
+      <label class="lab" for="version">Version</label>
+      <div class="stepper">
+        <button type="button" id="vMinus" aria-label="Lower version">&minus;</button>
+        <input id="version" type="number" inputmode="numeric" min="1" max="99" value="1">
+        <button type="button" id="vPlus" aria-label="Raise version">+</button>
+      </div>
+      <p class="hint">Raise it to get a new password for the same Gmail after a leak.</p>
+    </div>
+
+    <button type="submit" class="primary" id="go">Generate password</button>
+  </form>
+
+  <section class="card result" id="result" aria-live="polite">
+    <div class="r-head">
+      <span class="lab">Password for</span>
+      <span class="for" id="forEmail">No address yet</span>
+    </div>
+    <div class="pw" id="pw" data-state="idle">••••••••••••••••••••</div>
+    <input id="manual" class="manual" type="text" readonly hidden autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Password to copy by hand">
+    <p class="status" id="status" data-tone="muted">Enter your Gmail and master secret, then tap Generate.</p>
+    <div class="actions">
+      <button type="button" id="copy" disabled>Copy</button>
+      <button type="button" id="toggle" disabled>Hide</button>
+    </div>
+    <dl class="meta">
+      <div><dt>Length</dt><dd id="mLen">&ndash;</dd></div>
+      <div><dt>Strength</dt><dd id="mBits">&ndash;</dd></div>
+      <div><dt>Secret check</dt><dd id="mCheck">&ndash;</dd></div>
+    </dl>
+    <p class="note">The secret check is the same every time you type the same master secret. If it changes, you made a typo.</p>
+    <button type="button" class="linkbtn" id="clear">Clear everything</button>
+  </section>
+
+  <section class="card good">
+    <h2>Good to know</h2>
+    <ul>
+      <li>If someone learns one of your passwords, a short secret can be guessed from it. Make the secret long.</li>
+      <li>Write down the version you use for each Gmail. A different version gives a different password.</li>
+      <li>Everything is calculated on this device. This page saves and sends nothing.</li>
+      <li>Also turn on 2-step verification for each Gmail account.</li>
+    </ul>
+  </section>
+</div>
+
+<script id="core">
+/* Derivation core. No DOM access, so it can be tested on its own. */
+const ENC = new TextEncoder();
+const ITERATIONS = 600000;
+const SETS = {
+  lower: 'abcdefghijkmnopqrstuvwxyz',
+  upper: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+  digit: '23456789',
+  symbol: '!@#$%&*?-_+='
+};
+
+function normalizeEmail(raw) {
+  const v = String(raw).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return null;
+  const at = v.lastIndexOf('@');
+  let local = v.slice(0, at);
+  let domain = v.slice(at + 1);
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    domain = 'gmail.com';
+    local = local.split('+')[0].replace(/\./g, '');
+    if (!local) return null;
+  }
+  return local + '@' + domain;
+}
+
+async function hmac(key, text) {
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, ENC.encode(text)));
+}
+
+async function deriveMaster(secret) {
+  const base = await crypto.subtle.importKey('raw', ENC.encode(secret.normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-512', salt: ENC.encode('mailkey/v1/master'), iterations: ITERATIONS },
+    base, 512
+  );
+  return crypto.subtle.importKey('raw', bits, { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+}
+
+async function checkCode(key) {
+  const b = await hmac(key, 'mailkey/v1/check');
+  return [b[0], b[1]].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+async function makeStream(key, email, version) {
+  const BLOCKS = 16;
+  const buf = new Uint8Array(BLOCKS * 64);
+  for (let i = 0; i < BLOCKS; i++) {
+    buf.set(await hmac(key, 'mailkey/v1/pw|' + email + '|' + version + '|' + i), i * 64);
+  }
+  let pos = 0;
+  const next = () => {
+    if (pos >= buf.length) throw new Error('stream exhausted');
+    return buf[pos++];
+  };
+  return {
+    below(n) {
+      const limit = 256 - (256 % n);
+      for (;;) { const b = next(); if (b < limit) return b % n; }
+    }
+  };
+}
+
+async function derivePassword(key, email, version, length, symbols) {
+  const s = await makeStream(key, email, version);
+  const sets = [SETS.lower, SETS.upper, SETS.digit];
+  if (symbols) sets.push(SETS.symbol);
+  const all = sets.join('');
+  const out = [];
+  for (const set of sets) out.push(set[s.below(set.length)]);
+  while (out.length < length) out.push(all[s.below(all.length)]);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = s.below(i + 1);
+    const t = out[i]; out[i] = out[j]; out[j] = t;
+  }
+  return out.join('');
+}
+
+function bitsFor(length, symbols) {
+  const pool = SETS.lower.length + SETS.upper.length + SETS.digit.length + (symbols ? SETS.symbol.length : 0);
+  return Math.floor(length * Math.log2(pool));
+}
+</script>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const L = {
+    email: $('email'), emailHint: $('emailHint'), secret: $('secret'), showSecret: $('showSecret'),
+    meter: $('meter'), secretHint: $('secretHint'), length: $('length'), lenOut: $('lenOut'),
+    symbols: $('symbols'), version: $('version'), vMinus: $('vMinus'), vPlus: $('vPlus'),
+    form: $('f'), go: $('go'), forEmail: $('forEmail'), pw: $('pw'), status: $('status'),
+    manual: $('manual'), copy: $('copy'), toggle: $('toggle'), mLen: $('mLen'), mBits: $('mBits'), mCheck: $('mCheck'), clear: $('clear')
+  };
+
+  let master = null;   // { secret, key, check } kept in memory only
+  let current = null;  // { pw, email }
+  let revealed = true;
+  let runId = 0;
+
+  function setStatus(text, tone) { L.status.textContent = text; L.status.dataset.tone = tone || 'muted'; }
+
+  function renderPassword() {
+    L.pw.textContent = '';
+    if (!current) {
+      L.pw.dataset.state = 'idle';
+      L.pw.textContent = '•'.repeat(+L.length.value);
+      return;
+    }
+    if (!revealed) {
+      L.pw.dataset.state = 'hidden';
+      L.pw.textContent = '•'.repeat(current.pw.length);
+      return;
+    }
+    L.pw.dataset.state = 'shown';
+    for (const ch of current.pw) {
+      const span = document.createElement('span');
+      if (/[0-9]/.test(ch)) span.className = 'd';
+      else if (/[^A-Za-z0-9]/.test(ch)) span.className = 's';
+      span.textContent = ch;
+      L.pw.appendChild(span);
+    }
+  }
+
+  function renderIdle(message, tone) {
+    current = null;
+    L.manual.hidden = true; L.manual.value = '';
+    L.copy.disabled = true;
+    L.toggle.disabled = true;
+    L.mLen.textContent = '–';
+    L.mBits.textContent = '–';
+    L.mCheck.textContent = master && master.secret === L.secret.value ? master.check : '–';
+    L.forEmail.textContent = normalizeEmail(L.email.value) || 'No address yet';
+    renderPassword();
+    setStatus(message, tone);
+  }
+
+  function renderReady() {
+    L.manual.hidden = true; L.manual.value = '';
+    L.copy.disabled = false;
+    L.toggle.disabled = false;
+    L.toggle.textContent = revealed ? 'Hide' : 'Show';
+    L.forEmail.textContent = current.email;
+    L.mLen.textContent = String(current.pw.length);
+    L.mBits.textContent = '~' + bitsFor(current.pw.length, L.symbols.checked) + ' bits';
+    L.mCheck.textContent = master.check;
+    renderPassword();
+    setStatus('Derived on this device. Tap Copy, then paste it into the password box.', 'ok');
+  }
+
+  function updateEmailHint() {
+    const raw = L.email.value.trim().toLowerCase();
+    const n = normalizeEmail(L.email.value);
+    L.emailHint.textContent = '';
+    if (n && n !== raw) {
+      L.emailHint.append('Used as ');
+      const b = document.createElement('b'); b.textContent = n;
+      L.emailHint.append(b, ' (Gmail ignores dots and +tags).');
+    } else {
+      L.emailHint.textContent = 'Dots and +tags are ignored for Gmail, as Google does.';
+    }
+  }
+
+  function updateMeter() {
+    const n = L.secret.value.length;
+    const level = n === 0 ? 0 : n < 12 ? 1 : n < 16 ? 2 : 3;
+    L.meter.dataset.level = String(level);
+    L.secretHint.textContent = [
+      'The one thing you must remember. Never use it anywhere else.',
+      'Too short. Anyone holding one of your passwords could guess this.',
+      'Usable, but longer is safer. Aim for 16 or more characters.',
+      'Good length. Make sure the words or characters are unpredictable.'
+    ][level];
+  }
+
+  async function generate() {
+    const email = normalizeEmail(L.email.value);
+    const secret = L.secret.value;
+    if (!email) { renderIdle('Enter a full address, like name@gmail.com.', 'bad'); return; }
+    if (secret.length < 8) { renderIdle('The master secret needs at least 8 characters. 16 or more is better.', 'bad'); return; }
+    const id = ++runId;
+    L.go.disabled = true;
+    try {
+      if (!master || master.secret !== secret) {
+        setStatus('Deriving your key. This takes a moment on purpose.', 'muted');
+        await new Promise(r => setTimeout(r, 30));
+        const key = await deriveMaster(secret);
+        master = { secret, key, check: await checkCode(key) };
+      }
+      const pw = await derivePassword(master.key, email, +L.version.value || 1, +L.length.value, L.symbols.checked);
+      if (id !== runId) return;
+      current = { pw, email };
+      renderReady();
+    } catch (e) {
+      if (id === runId) renderIdle('This browser could not run the calculation. Try a current Chrome, Safari or Firefox.', 'bad');
+    } finally {
+      if (id === runId) L.go.disabled = false;
+    }
+  }
+
+  function canLive() {
+    return master && master.secret === L.secret.value && normalizeEmail(L.email.value) && L.secret.value.length >= 8;
+  }
+  function onSettingsChange() {
+    updateEmailHint();
+    if (canLive()) { generate(); }
+    else if (current) { renderIdle('Inputs changed. Tap Generate.', 'muted'); }
+    else { L.forEmail.textContent = normalizeEmail(L.email.value) || 'No address yet'; renderPassword(); }
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* fall through */ }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+    document.body.appendChild(ta);
+    let ok = false;
+    try {
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      ok = document.execCommand('copy');
+    } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  L.form.addEventListener('submit', e => { e.preventDefault(); generate(); });
+  L.email.addEventListener('input', onSettingsChange);
+  L.symbols.addEventListener('change', onSettingsChange);
+  L.version.addEventListener('input', onSettingsChange);
+  L.length.addEventListener('input', () => { L.lenOut.textContent = L.length.value; onSettingsChange(); });
+  L.secret.addEventListener('input', () => {
+    updateMeter();
+    if (current) renderIdle('Master secret changed. Tap Generate.', 'muted');
+    else L.mCheck.textContent = '–';
+  });
+
+  /* A masked text field keeps Copy in the selection menu; a password-type field loses it on Android. */
+  const canMask = !!(window.CSS && CSS.supports && CSS.supports('-webkit-text-security', 'disc'));
+  if (!canMask) { L.secret.type = 'password'; L.secret.classList.remove('masked'); }
+  L.showSecret.addEventListener('click', () => {
+    const masked = canMask ? L.secret.classList.contains('masked') : L.secret.type === 'password';
+    if (canMask) L.secret.classList.toggle('masked', !masked);
+    else L.secret.type = masked ? 'text' : 'password';
+    L.showSecret.textContent = masked ? 'Hide' : 'Show';
+    L.showSecret.setAttribute('aria-pressed', String(masked));
+  });
+
+  function bump(d) {
+    const v = Math.min(99, Math.max(1, (+L.version.value || 1) + d));
+    L.version.value = String(v);
+    onSettingsChange();
+  }
+  L.vMinus.addEventListener('click', () => bump(-1));
+  L.vPlus.addEventListener('click', () => bump(1));
+
+  L.toggle.addEventListener('click', () => {
+    if (!current) return;
+    revealed = !revealed;
+    L.toggle.textContent = revealed ? 'Hide' : 'Show';
+    renderPassword();
+  });
+
+  L.copy.addEventListener('click', async () => {
+    if (!current) return;
+    const ok = await copyText(current.pw);
+    if (ok) { setStatus('Copied. Paste it into the password box.', 'ok'); }
+    else {
+      L.manual.hidden = false;
+      L.manual.value = current.pw;
+      L.manual.focus();
+      L.manual.select();
+      try { L.manual.setSelectionRange(0, current.pw.length); } catch (e) { /* ignore */ }
+      setStatus('This browser blocks the Copy button. Press and hold the box above, then choose Copy.', 'bad');
+    }
+  });
+
+  L.clear.addEventListener('click', () => {
+    runId++;
+    L.email.value = ''; L.secret.value = '';
+    master = null; current = null; revealed = true;
+    L.go.disabled = false;
+    updateEmailHint(); updateMeter();
+    renderIdle('Cleared. Enter your Gmail and master secret, then tap Generate.', 'muted');
+  });
+
+  updateEmailHint();
+  updateMeter();
+  renderPassword();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
